@@ -264,6 +264,34 @@ def _exchange_code(code: str) -> str:
     return token
 
 
+def _open_apis_base() -> str:
+    """Derive the open-apis base (feishu.cn or larksuite) from the token URL."""
+    return FEISHU_TOKEN_URL.split("/open-apis", 1)[0] + "/open-apis"
+
+
+def _tenant_access_token() -> str:
+    data = _http_post_json(
+        f"{_open_apis_base()}/auth/v3/tenant_access_token/internal",
+        {"app_id": FEISHU_APP_ID, "app_secret": Secrets.feishu_app_secret()},
+    )
+    token = data.get("tenant_access_token")
+    if not token:
+        raise ValueError(f"tenant_access_token failed: {data}")
+    return token
+
+
+def _fetch_contact_email(open_id: str) -> dict:
+    """Read mailbox fields from the Contact API — user_info doesn't expose the
+    admin-assigned 通讯录 mailbox, so this is the fallback for those users."""
+    url = f"{_open_apis_base()}/contact/v3/users/{open_id}?user_id_type=open_id"
+    body = _http_get_json(url, _tenant_access_token())
+    contact = (body.get("data") or {}).get("user") or {}
+    return {
+        "email": contact.get("email"),
+        "enterprise_email": contact.get("enterprise_email"),
+    }
+
+
 def _pick_email(user: dict) -> str | None:
     """Resolve the email claim from Feishu's two mailbox fields per EMAIL_CLAIM.
 
@@ -285,10 +313,22 @@ def _pick_email(user: dict) -> str | None:
 def _fetch_user(user_access_token: str) -> dict:
     body = _http_get_json(FEISHU_USERINFO_URL, user_access_token)
     user = body.get("data") or {}
+
+    # user_info only returns the user-bound work email, not the admin-assigned
+    # 通讯录 mailbox. If it has no usable email, fall back to the Contact API.
+    if not _pick_email(user) and user.get("open_id"):
+        contact = _fetch_contact_email(user["open_id"])
+        user.setdefault("email", None)
+        if contact.get("email"):
+            user["email"] = contact["email"]
+        if contact.get("enterprise_email"):
+            user["enterprise_email"] = contact["enterprise_email"]
+
     if not _pick_email(user):
         raise ValueError(
             f"feishu user has no email for EMAIL_CLAIM={EMAIL_CLAIM}; "
-            "grant contact:user.email:readonly and fill the mailbox in 通讯录"
+            "grant contact:user.email:readonly + contact:user.employee:readonly "
+            "and fill the mailbox in 通讯录"
         )
     return user
 

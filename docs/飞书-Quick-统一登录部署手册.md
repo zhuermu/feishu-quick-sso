@@ -11,9 +11,13 @@
 
 1. [飞书开放平台](https://open.feishu.cn/) → 开发者后台 → **创建企业自建应用**。
 2. **凭证与基础信息** 页记下 **App ID**（`cli_` 开头）和 **App Secret**。
-3. **权限管理** → 开通 `获取用户邮箱信息`（`contact:user.email:readonly`）。
+3. **权限管理** → 开通：
+   - `获取用户邮箱信息`（`contact:user.email:readonly`）
+   - `获取用户受雇信息`（`contact:user.employee:readonly`）— 读通讯录里的企业邮箱兜底用
 4. **可用范围** → 设为使用 Quick 的部门/成员。范围内用户须在通讯录里有邮箱（企业邮箱或工作邮箱皆可，
    见下方 `emailClaim` 参数），且与 Quick 用户邮箱一致。
+   - 用户若只在**通讯录**里配了企业邮箱（未在飞书个人设置绑定），适配器会自动用通讯录 API 兜底取到，
+     无需用户自己绑定。
 5. **重定向 URL** 先留空（第 3 步回填）。
 6. **创建版本并发布**（权限和可用范围改动必须发布才生效）。
 
@@ -103,7 +107,7 @@ npx cdk deploy -c feishuAppId=cli_xxxxxxxxxxxx     # 用你的 App ID
 
 | 现象 | 处理 |
 |------|------|
-| `feishu user has no email` | 飞书应用未发布邮箱权限，或用户在通讯录没填对应邮箱。若用户只有工作邮箱，用 `-c emailClaim=work` 重新部署 |
+| `feishu user has no email` | 未发布 `contact:user.email:readonly` + `contact:user.employee:readonly` 权限，或用户在通讯录没填任何邮箱，或应用可用范围不含该用户 |
 | Desktop 报 `invalid_scope` | Auth/Token 端点直连了 Cognito，改用 `/cognito/*` 端点 |
 | 用户不在可用范围 | 飞书后台把可用范围设为使用 Quick 的部门/成员 |
 | 换了飞书应用后 /token 失败 | 新 App Secret 不同，重跑 `set_feishu_secret.py` |
