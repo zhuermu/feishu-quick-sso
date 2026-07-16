@@ -1,5 +1,9 @@
 # 飞书 × Amazon Quick 单点登录
 
+> ⚠️ **本仓库已迁移**
+> 最新代码与文档请移步 → **[aws-samples/sample-for-amazon-quick-sso-with-feishu](https://github.com/aws-samples/sample-for-amazon-quick-sso-with-feishu)**
+> 本仓库不再更新，仅作历史存档。
+
 用**飞书自建应用**作为唯一身份源，让
 [Amazon Quick Web](https://docs.aws.amazon.com/quick/latest/userguide/identity.html) 和
 [Amazon Quick Desktop](https://docs.aws.amazon.com/quick/latest/userguide/amazon-quick-desktop.html)
